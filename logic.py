@@ -164,7 +164,7 @@ def list_photos_to_process(source_dir="processar"):
         source_path.mkdir(parents=True, exist_ok=True)
         return []
     
-    extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
+    extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.heic', '.heif')
     return [str(f) for f in sorted(source_path.iterdir()) if f.suffix.lower() in extensions]
 
 def levenshtein_distance(s1, s2):

@@ -19,14 +19,14 @@ Aplicacao desktop para organizar fotos por fazenda/lote/data e registrar brincos
 
 ## Requisitos
 - Python 3.x
-- Dependencias: `customtkinter`, `tkcalendar`, `pillow`, `openpyxl`
+- Dependencias: `customtkinter`, `tkcalendar`, `pillow`, `pillow-heif`, `openpyxl`
 
 ## Criar venv e instalar dependencias (Windows / PowerShell)
 ```ps1
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install customtkinter tkcalendar pillow openpyxl
+pip install customtkinter tkcalendar pillow pillow-heif openpyxl
 ```
 
 ## Executar

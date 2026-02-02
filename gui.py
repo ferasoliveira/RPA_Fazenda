@@ -14,6 +14,27 @@ from logic import (
 )
 from tkinter import messagebox
 from pathlib import Path
+import sys
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return Path(base_path) / relative_path
+
+
+# Optional HEIC/HEIF support via pillow-heif
+try:
+    from pillow_heif import register_heif_opener
+
+    register_heif_opener()
+    HEIF_ENABLED = True
+except Exception:
+    HEIF_ENABLED = False
 
 # Farm Palette
 COLOR_FOREST_GREEN = "#2E7D32"
@@ -29,6 +50,17 @@ class RPAFazendaApp(ctk.CTk):
         self.title("RPA Foto Fazenda v3.0")
         self.geometry("1000x800")
         ctk.set_appearance_mode("Dark")
+        
+        # Set Icon
+        icon_path = resource_path("assets/ox_icon.png")
+        if icon_path.exists():
+            try:
+                img = Image.open(icon_path)
+                photo = ImageTk.PhotoImage(img)
+                self.after(200, lambda: self.wm_iconphoto(True, photo))
+            except Exception as e:
+                print(f"Error loading icon: {e}")
+
         
         self.selected_date = None
         self.selected_farm = None
@@ -207,6 +239,14 @@ class RPAFazendaApp(ctk.CTk):
         self.total_photos = len(self.photos_to_process)
         self.current_photo_index = 0
         self.processed_history = []
+
+        heic_present = any(Path(p).suffix.lower() in (".heic", ".heif") for p in self.photos_to_process)
+        if heic_present and not HEIF_ENABLED:
+            messagebox.showerror(
+                "Erro",
+                "Fotos HEIC/HEIF encontradas, mas o suporte nao esta instalado. Instale pillow-heif."
+            )
+            return
         
         if self.total_photos == 0:
             messagebox.showinfo("Aviso", "Sem fotos na pasta 'processar'")
