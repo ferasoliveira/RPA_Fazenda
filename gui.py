@@ -237,8 +237,10 @@ class RPAFazendaApp(ctk.CTk):
         
         self.photos_to_process = list_photos_to_process()
         self.total_photos = len(self.photos_to_process)
+        self.total_photos = len(self.photos_to_process)
         self.current_photo_index = 0
         self.processed_history = []
+        self.last_brinco_number = None
 
         heic_present = any(Path(p).suffix.lower() in (".heic", ".heif") for p in self.photos_to_process)
         if heic_present and not HEIF_ENABLED:
@@ -300,15 +302,52 @@ class RPAFazendaApp(ctk.CTk):
 
     def process_current(self):
         brinco = self.brinco_entry.get().strip()
-        if not brinco: return
-            
-        orig_path = self.photos_to_process[self.current_photo_index]
-        dest_path = self.target_path / f"{brinco}{Path(orig_path).suffix}"
-        
-        success, message = process_photo(orig_path, self.target_path, brinco, self.excel_path)
+
+        # Check if input is empty
+        if not brinco:
+            if self.last_brinco_number:
+                # FIRST ENTER: Suggest the next suffix and fill the box
+                base_name = self.last_brinco_number
+                count = 2
+                while (self.target_path / f"{base_name}_{count}.jpg").exists():
+                    count += 1
+                suggested_name = f"{base_name}_{count}"
+                
+                self.brinco_entry.insert(0, suggested_name)
+                self.brinco_entry.select_range(0, 'end')
+                return # Stop here, user must press Enter again to confirm
+            else:
+                return # Nothing to do
+
+        # If we have text, check if it's a "skip_excel" case (has a suffix)
+        # Or more simply, check if it matches the 'last_brinco_number' with a suffix
+        skip_excel = False
+        if self.last_brinco_number and brinco.startswith(f"{self.last_brinco_number}_"):
+            skip_excel = True
+
+        success, message = process_photo(
+            self.photos_to_process[self.current_photo_index], 
+            self.target_path, 
+            brinco, 
+            self.excel_path,
+            skip_excel=skip_excel
+        )
+
         
         if success:
-            self.processed_history.append({'original_path': orig_path, 'dest_path': str(dest_path), 'brinco_number': brinco, 'excel_path': str(self.excel_path)})
+            if not skip_excel:
+                self.last_brinco_number = brinco
+
+            orig_path = self.photos_to_process[self.current_photo_index]
+            dest_path = self.target_path / f"{brinco}.jpg"
+
+            self.processed_history.append({
+                'original_path': orig_path, 
+                'dest_path': str(dest_path), 
+                'brinco_number': brinco, 
+                'excel_path': str(self.excel_path),
+                'skip_excel': skip_excel
+            })
             self.current_photo_index += 1
             self.show_processing_screen()
         else:

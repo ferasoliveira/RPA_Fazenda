@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 import openpyxl
 from openpyxl import Workbook, load_workbook
+from PIL import Image
 
 # Base directory for processed data
 BASE_DIR = "Dados Processados"
@@ -107,37 +108,51 @@ def remove_last_from_excel(excel_path, brinco_number):
     
     return False
 
-def process_photo(photo_path, target_folder, brinco_number, excel_path):
+def process_photo(photo_path, target_folder, brinco_number, excel_path, skip_excel=False):
     """
-    Moves, renames the photo, and adds the data to Excel.
+    Converts to JPEG, renames the photo, and adds the data to Excel (unless skip_excel is True).
     """
-    # 1. Check for duplicates in Excel
-    if check_duplicate(excel_path, brinco_number):
-        return False, f"O número {brinco_number} já foi adicionado."
 
-    # 2. Add to Excel
+    # 1. Check for duplicates in Excel only if not skipping
+    if not skip_excel:
+        if check_duplicate(excel_path, brinco_number):
+            return False, f"O número {brinco_number} já foi adicionado."
+
+        # 2. Add to Excel
+        try:
+            add_to_excel(excel_path, brinco_number)
+        except Exception as e:
+            return False, f"Erro ao atualizar Excel: {e}"
+
+    # 3. Handle image conversion and save
     try:
-        add_to_excel(excel_path, brinco_number)
-    except Exception as e:
-        return False, f"Erro ao atualizar Excel: {e}"
+        # Always save as .jpg
+        destination = target_folder / f"{brinco_number}.jpg"
+        
+        # Handle if file already exists in destination
+        if destination.exists():
+            if not skip_excel:
+                remove_last_from_excel(excel_path, brinco_number)
+            return False, f"Já existe uma foto com o nome {brinco_number}.jpg na pasta de destino."
 
-    # 3. Rename and Move photo
-    photo_ext = Path(photo_path).suffix
-    new_photo_name = f"{brinco_number}{photo_ext}"
-    destination = target_folder / new_photo_name
-    
-    # Handle if file already exists in destination
-    if destination.exists():
-        return False, f"Já existe uma foto com o nome {new_photo_name} na pasta de destino."
-
-    try:
-        shutil.move(photo_path, destination)
+        # Open image and convert to RGB (required for JPEG)
+        img = Image.open(photo_path)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
+        img.save(destination, "JPEG", quality=90)
+        
+        # Remove original file after successful conversion/save
+        os.remove(photo_path)
+        
     except Exception as e:
-        # Rollback Excel if move fails
-        remove_last_from_excel(excel_path, brinco_number)
-        return False, f"Erro ao mover foto: {e}"
+        # Rollback Excel if something fails
+        if not skip_excel:
+            remove_last_from_excel(excel_path, brinco_number)
+        return False, f"Erro ao processar imagem: {e}"
 
     return True, "Sucesso"
+
 
 def undo_process(photo_info):
     """
