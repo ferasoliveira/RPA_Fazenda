@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Local tooling
+.agent/
+
+# Dados usados
+Dados Processados/
